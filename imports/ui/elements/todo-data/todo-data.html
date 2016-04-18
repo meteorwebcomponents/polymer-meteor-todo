@@ -1,0 +1,70 @@
+<dom-module id="todo-data">
+
+  <template>
+
+    <style>
+
+    </style>
+
+    <firebase-collection location="{{userLocation}}"
+                         data="{{fbTodos}}"
+                         on-firebase-value="_firebaseLoaded">
+    </firebase-collection>
+
+    <!-- Backfill todos from localstorage. This prevents an initial flash while
+         we're waiting to hear from Firebase, and it lets the user see their
+         old todos if they start the app offline.
+         This SHOULD NOT write to Firebase. If the user has cleared their
+         localstorage, it should not nullify everything saved in Firebase. -->
+    <iron-localstorage name="polymer-todo"
+                       on-iron-localstorage-load="_backupLoaded"
+                       value="{{backupTodos}}">
+    </iron-localstorage>
+
+  </template>
+  <script>
+    Polymer({
+
+      is: 'todo-data',
+
+      properties: {
+
+        todos: {
+          notify: true
+        },
+
+        user: {
+          observer: '_userChanged'
+        },
+
+        _firebaseConnected: {
+          value: false
+        }
+
+      },
+
+      // Setup user ref in firebase if auth succeeds
+      _userChanged: function(user) {
+        if (user) {
+          this.userLocation = [this.location, 'users', this.user.uid].join('/');
+        }
+      },
+
+      _firebaseLoaded: function() {
+        this._firebaseConnected = true;
+        this.todos = this.fbTodos;
+        this.backupTodos = this.fbTodos;
+        this.linkPaths('fbTodos', 'todos');
+        this.linkPaths('backupTodos', 'todos');
+      },
+
+      _backupLoaded: function() {
+        if (!this._firebaseConnected) {
+          this.todos = this.backupTodos.slice();
+        }
+      }
+
+    });
+
+  </script>
+</dom-module>
